@@ -1064,15 +1064,26 @@
             },
         ];
 
-        // URLs importantes - SUBSTITUA SEU_CLIENT_ID pelo seu Client ID real
-        const DISCORD_CLIENT_ID = '1369065922702344353'; // <-- IMPORTANTE: Altere isso!
+        // URLs CORRETAS - Use a que está correta para o seu caso
+        // OPÇÃO 1: Se seu usuário for "kouthlol" (com L)
         const GITHUB_PAGES_URL = 'https://kouthlol.github.io/discord-profile/';
         const OAUTH_REDIRECT_URI = 'https://kouthlol.github.io/discord-profile/discord-profile-oauth.html';
+        
+        // OPÇÃO 2: Se seu usuário for "kouthol" (sem L) - descomente as linhas abaixo se for o caso
+        // const GITHUB_PAGES_URL = 'https://kouthol.github.io/discord-profile/';
+        // const OAUTH_REDIRECT_URI = 'https://kouthol.github.io/discord-profile/discord-profile-oauth.html';
+        
+        // OPÇÃO 3: Se for outra estrutura - ajuste conforme necessário
+        // const GITHUB_PAGES_URL = 'https://kouthol.github.io/discord/profile/';
+        // const OAUTH_REDIRECT_URI = 'https://kouthol.github.io/discord/profile/discord-profile-oauth.html';
+
+        // IMPORTANTE: Substitua pelo seu Client ID real do Discord
+        const DISCORD_CLIENT_ID = '1369065922702344353';
 
         function DiscordProfile() {
             const [userId, setUserId] = useState(localStorage.getItem('discordUserId') || '');
             const [githubUsername, setGithubUsername] = useState(localStorage.getItem('githubUsername') || '');
-            const [discordClientId, setDiscordClientId] = useState(DISCORD_CLIENT_ID);
+            const [discordClientId, setDiscordClientId] = useState(localStorage.getItem('discordClientId') || DISCORD_CLIENT_ID);
             const [userData, setUserData] = useState(null);
             const [githubData, setGithubData] = useState(null);
             const [loading, setLoading] = useState(false);
@@ -1123,6 +1134,12 @@
 
             // Função para login com Discord
             const loginWithDiscord = () => {
+                if (!discordClientId || discordClientId === 'SEU_CLIENT_ID_AQUI') {
+                    alert('Por favor, configure seu Client ID do Discord nas configurações primeiro!');
+                    setMenuOpen(true);
+                    return;
+                }
+                
                 const scope = 'identify email guilds connections activities.read';
                 const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${encodeURIComponent(OAUTH_REDIRECT_URI)}&response_type=code&scope=${scope}&prompt=none`;
                 
