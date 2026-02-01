@@ -769,6 +769,148 @@
             text-align: center;
             padding: 0.5rem;
         }
+
+        /* Novos estilos para o link do GitHub Pages */
+        .github-pages-link {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .github-pages-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .github-pages-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            background: linear-gradient(135deg, #764ba2, #667eea);
+        }
+
+        .github-pages-icon {
+            font-size: 1.2rem;
+        }
+
+        .deploy-link {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .deploy-link a {
+            color: #1ed760;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .deploy-link a:hover {
+            color: #1db954;
+            transform: scale(1.05);
+        }
+
+        .deploy-icon {
+            font-size: 1.2rem;
+        }
+
+        .live-demo-link {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 0.8rem 1.5rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            animation: slideInUp 0.5s ease;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .live-demo-link a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .live-demo-link a:hover {
+            color: #1ed760;
+        }
+
+        .live-demo-icon {
+            font-size: 1rem;
+        }
+
+        .project-footer {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .project-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .project-link {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .project-link:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .project-link-icon {
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -824,6 +966,9 @@
                 name: 'Dark Night'
             },
         ];
+
+        // URL do GitHub Pages
+        const GITHUB_PAGES_URL = 'https://kouthlol.github.io/discord-profile/';
 
         function DiscordProfile() {
             const [userId, setUserId] = useState(localStorage.getItem('discordUserId') || '');
@@ -1118,6 +1263,14 @@
                         {menuOpen ? '✕' : '⚙️'}
                     </div>
 
+                    {/* Link flutuante para o GitHub Pages */}
+                    <div className="live-demo-link">
+                        <a href={GITHUB_PAGES_URL} target="_blank" rel="noopener noreferrer">
+                            <span className="live-demo-icon">🌐</span>
+                            Ver versão online
+                        </a>
+                    </div>
+
                     <div className={`customizer ${menuOpen ? 'open' : ''}`}>
                         <h3>⚙️ Configurações</h3>
                         
@@ -1196,6 +1349,20 @@
                                 ))}
                             </div>
                         </div>
+
+                        {/* Seção com link para GitHub Pages */}
+                        <div className="section">
+                            <div className="section-title">🌐 Demo Online</div>
+                            <div className="deploy-link">
+                                <a href={GITHUB_PAGES_URL} target="_blank" rel="noopener noreferrer">
+                                    <span className="deploy-icon">🚀</span>
+                                    Acessar versão online no GitHub Pages
+                                </a>
+                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+                                    {GITHUB_PAGES_URL}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="content">
@@ -1242,6 +1409,14 @@
                                             ))}
                                         </div>
                                     )}
+
+                                    {/* Botão para GitHub Pages */}
+                                    <div className="github-pages-link">
+                                        <a href={GITHUB_PAGES_URL} target="_blank" rel="noopener noreferrer" className="github-pages-btn">
+                                            <span className="github-pages-icon">🚀</span>
+                                            Ver Demo Online
+                                        </a>
+                                    </div>
                                 </div>
 
                                 {githubData && !githubLoading && (
@@ -1353,6 +1528,20 @@
                                             </div>
                                         );
                                     })}
+                                </div>
+
+                                {/* Footer com links do projeto */}
+                                <div className="project-footer">
+                                    <div className="project-links">
+                                        <a href={GITHUB_PAGES_URL} target="_blank" rel="noopener noreferrer" className="project-link">
+                                            <span className="project-link-icon">🌐</span>
+                                            Demo Online
+                                        </a>
+                                        <a href="https://github.com/kouthlol/discord-profile" target="_blank" rel="noopener noreferrer" className="project-link">
+                                            <span className="project-link-icon">💻</span>
+                                            Código Fonte
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         )}
