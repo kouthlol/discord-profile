@@ -911,6 +911,103 @@
         .project-link-icon {
             font-size: 1rem;
         }
+
+        .discord-login-btn {
+            margin-top: 1rem;
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, #7289da, #5865f2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .discord-login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(114, 137, 218, 0.4);
+            background: linear-gradient(135deg, #5865f2, #7289da);
+        }
+
+        .oauth-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .oauth-section label {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .oauth-section input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .oauth-section input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .oauth-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #7289da, #5865f2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 0.5rem;
+        }
+
+        .oauth-btn:hover {
+            background: linear-gradient(135deg, #5865f2, #7289da);
+            transform: translateY(-2px);
+        }
+
+        .auth-success {
+            color: #3ba55d;
+            text-align: center;
+            padding: 0.5rem;
+            background: rgba(59, 165, 93, 0.1);
+            border: 1px solid rgba(59, 165, 93, 0.3);
+            border-radius: 8px;
+            margin-top: 1rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .auth-error {
+            color: #ed4245;
+            text-align: center;
+            padding: 0.5rem;
+            background: rgba(237, 66, 69, 0.1);
+            border: 1px solid rgba(237, 66, 69, 0.3);
+            border-radius: 8px;
+            margin-top: 1rem;
+            animation: fadeIn 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -967,12 +1064,15 @@
             },
         ];
 
-        // URL do GitHub Pages
+        // URLs importantes - SUBSTITUA SEU_CLIENT_ID pelo seu Client ID real
+        const DISCORD_CLIENT_ID = '1369065922702344353'; // <-- IMPORTANTE: Altere isso!
         const GITHUB_PAGES_URL = 'https://kouthlol.github.io/discord-profile/';
+        const OAUTH_REDIRECT_URI = 'https://kouthlol.github.io/discord-profile/discord-profile-oauth.html';
 
         function DiscordProfile() {
             const [userId, setUserId] = useState(localStorage.getItem('discordUserId') || '');
             const [githubUsername, setGithubUsername] = useState(localStorage.getItem('githubUsername') || '');
+            const [discordClientId, setDiscordClientId] = useState(DISCORD_CLIENT_ID);
             const [userData, setUserData] = useState(null);
             const [githubData, setGithubData] = useState(null);
             const [loading, setLoading] = useState(false);
@@ -986,6 +1086,7 @@
             );
             const [menuOpen, setMenuOpen] = useState(false);
             const [spotifyProgress, setSpotifyProgress] = useState(0);
+            const [authStatus, setAuthStatus] = useState(null);
             const wsRef = useRef(null);
             const progressIntervalRef = useRef(null);
             const fileInputRef = useRef(null);
@@ -1020,10 +1121,50 @@
                 'nitro': { name: 'Discord Nitro', icon: 'https://cdn.discordapp.com/badge-icons/2ba85e8026a8614b640c2837bcdfe21b.png' }
             };
 
+            // Função para login com Discord
+            const loginWithDiscord = () => {
+                const scope = 'identify email guilds connections activities.read';
+                const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${discordClientId}&redirect_uri=${encodeURIComponent(OAUTH_REDIRECT_URI)}&response_type=code&scope=${scope}&prompt=none`;
+                
+                // Abre em uma nova janela
+                const width = 500;
+                const height = 700;
+                const left = (window.screen.width - width) / 2;
+                const top = (window.screen.height - height) / 2;
+                
+                window.open(discordAuthUrl, 'Discord Login', 
+                    `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes`
+                );
+            };
+
             useEffect(() => {
+                // Verifica se há código de autenticação na URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const authCode = urlParams.get('code');
+                const error = urlParams.get('error');
+                
+                if (authCode) {
+                    setAuthStatus('success');
+                    console.log('Código OAuth recebido:', authCode);
+                    
+                    // Aqui você faria a troca do código por token
+                    // Por enquanto, apenas limpa a URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    
+                    // Remove a mensagem após 5 segundos
+                    setTimeout(() => setAuthStatus(null), 5000);
+                } else if (error) {
+                    setAuthStatus('error');
+                    console.error('Erro OAuth:', error);
+                    
+                    // Remove a mensagem após 5 segundos
+                    setTimeout(() => setAuthStatus(null), 5000);
+                }
+
                 if (userId) {
                     connectWebSocket();
                 }
+                
                 return () => {
                     if (wsRef.current) {
                         wsRef.current.close();
@@ -1143,6 +1284,12 @@
                 localStorage.setItem('githubUsername', newUsername);
             };
 
+            const handleDiscordClientIdChange = (e) => {
+                const newClientId = e.target.value;
+                setDiscordClientId(newClientId);
+                localStorage.setItem('discordClientId', newClientId);
+            };
+
             const handleBackgroundChange = (bgId) => {
                 setBackground(bgId);
                 setCustomBackground(null);
@@ -1183,14 +1330,11 @@
                 }
 
                 // Nitro badge
-                console.log('Premium type:', userData.discord_user?.premium_type);
                 if (userData.discord_user?.premium_type === 1 || userData.discord_user?.premium_type === 2) {
                     userBadges.push(nitroBadges.nitro);
-                    console.log('Nitro badge added!');
                 }
 
-                // Server Boost badges (com níveis baseados em tempo)
-                console.log('Premium guild since:', userData.discord_user?.premium_guild_since);
+                // Server Boost badges
                 if (userData.discord_user?.premium_guild_since) {
                     const boostStart = new Date(userData.discord_user.premium_guild_since);
                     const now = new Date();
@@ -1221,13 +1365,8 @@
                     
                     if (boostBadge) {
                         userBadges.push(boostBadge);
-                        console.log('Boost badge added:', boostBadge.name, 'Months:', monthsBoosting);
                     }
                 }
-
-                // Debug: log para ver os dados
-                console.log('User data:', userData);
-                console.log('Badges found:', userBadges);
 
                 return userBadges;
             };
@@ -1274,6 +1413,18 @@
                     <div className={`customizer ${menuOpen ? 'open' : ''}`}>
                         <h3>⚙️ Configurações</h3>
                         
+                        {authStatus === 'success' && (
+                            <div className="auth-success">
+                                ✅ Autenticação com Discord realizada com sucesso!
+                            </div>
+                        )}
+                        
+                        {authStatus === 'error' && (
+                            <div className="auth-error">
+                                ❌ Erro na autenticação com Discord
+                            </div>
+                        )}
+                        
                         <div className="section">
                             <div className="discord-id">
                                 <label>Discord User ID</label>
@@ -1295,6 +1446,24 @@
                                     onChange={handleGithubUsernameChange}
                                     placeholder="Seu nome de usuário do GitHub"
                                 />
+                            </div>
+                        </div>
+
+                        <div className="section">
+                            <div className="oauth-section">
+                                <label>Discord OAuth Client ID</label>
+                                <input 
+                                    type="text" 
+                                    value={discordClientId}
+                                    onChange={handleDiscordClientIdChange}
+                                    placeholder="Seu Client ID do Discord"
+                                />
+                                <button onClick={loginWithDiscord} className="oauth-btn">
+                                    🎮 Testar Login com Discord
+                                </button>
+                                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+                                    Obtenha seu Client ID em: discord.com/developers
+                                </div>
                             </div>
                         </div>
 
@@ -1350,7 +1519,6 @@
                             </div>
                         </div>
 
-                        {/* Seção com link para GitHub Pages */}
                         <div className="section">
                             <div className="section-title">🌐 Demo Online</div>
                             <div className="deploy-link">
@@ -1409,6 +1577,14 @@
                                             ))}
                                         </div>
                                     )}
+
+                                    {/* Botão de Login com Discord */}
+                                    <button 
+                                        onClick={loginWithDiscord}
+                                        className="discord-login-btn"
+                                    >
+                                        <span>🎮</span> Login com Discord
+                                    </button>
 
                                     {/* Botão para GitHub Pages */}
                                     <div className="github-pages-link">
@@ -1530,7 +1706,93 @@
                                     })}
                                 </div>
 
-                                {/* Footer com links do projeto */}
+                                <div className="project-footer">
+                                    <div className="project-links">
+                                        <a href={GITHUB_PAGES_URL} target="_blank" rel="noopener noreferrer" className="project-link">
+                                            <span className="project-link-icon">🌐</span>
+                                            Demo Online
+                                        </a>
+                                        <a href="https://github.com/kouthlol/discord-profile" target="_blank" rel="noopener noreferrer" className="project-link">
+                                            <span className="project-link-icon">💻</span>
+                                            Código Fonte
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tela inicial quando não há dados */}
+                        {!userData && !loading && !error && (
+                            <div className="profile-card">
+                                <div className="avatar-container">
+                                    <div className="avatar-wrapper">
+                                        <div style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            background: 'linear-gradient(135deg, #7289da, #5865f2)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: 'white',
+                                            fontSize: '2.5rem'
+                                        }}>
+                                            🎮
+                                        </div>
+                                        <div className="status-indicator offline" />
+                                    </div>
+                                </div>
+
+                                <div className="user-info">
+                                    <div className="username">
+                                        Discord Profile Live
+                                    </div>
+                                    <div className="discriminator">
+                                        Conecte-se para ver seu perfil
+                                    </div>
+                                    
+                                    <div className="status-text">
+                                        🔧 Configure seu User ID ou faça login com Discord
+                                    </div>
+
+                                    {/* Botão de Login com Discord */}
+                                    <button 
+                                        onClick={loginWithDiscord}
+                                        className="discord-login-btn"
+                                        style={{ marginTop: '1.5rem' }}
+                                    >
+                                        <span>🎮</span> Login com Discord
+                                    </button>
+
+                                    {/* Instruções */}
+                                    <div style={{
+                                        marginTop: '1.5rem',
+                                        padding: '1rem',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        borderRadius: '12px',
+                                        fontSize: '0.85rem',
+                                        color: 'rgba(255, 255, 255, 0.7)',
+                                        textAlign: 'left'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <span>1️⃣</span> Clique no botão acima para login
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <span>2️⃣</span> Ou insira seu User ID manualmente
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <span>3️⃣</span> Configure o Client ID no painel ⚙️
+                                        </div>
+                                    </div>
+
+                                    {/* Botão para GitHub Pages */}
+                                    <div className="github-pages-link" style={{ marginTop: '1.5rem' }}>
+                                        <a href={GITHUB_PAGES_URL} target="_blank" rel="noopener noreferrer" className="github-pages-btn">
+                                            <span className="github-pages-icon">🚀</span>
+                                            Ver Demo Online
+                                        </a>
+                                    </div>
+                                </div>
+
                                 <div className="project-footer">
                                     <div className="project-links">
                                         <a href={GITHUB_PAGES_URL} target="_blank" rel="noopener noreferrer" className="project-link">
