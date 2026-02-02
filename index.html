@@ -481,6 +481,28 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        .timestamps {
+            margin-top: 0.6rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Space Mono', monospace;
+        }
+
+        .spotify-bar {
+            margin-top: 0.75rem;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .spotify-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #1db954, #1ed760);
+            border-radius: 2px;
+            transition: width 1s linear;
+        }
     </style>
 </head>
 <body>
@@ -503,12 +525,16 @@
             const [menuOpen, setMenuOpen] = useState(false);
             const [activities, setActivities] = useState([]);
             const [spotifyData, setSpotifyData] = useState(null);
+            const [lanyardData, setLanyardData] = useState(null);
+            const [spotifyProgress, setSpotifyProgress] = useState(0);
             const fileInputRef = React.useRef(null);
+            const wsRef = React.useRef(null);
+            const progressIntervalRef = React.useRef(null);
 
             // Configurações do Discord OAuth2
             const CLIENT_ID = '1467351282493947994';
             const REDIRECT_URI = window.location.origin + window.location.pathname;
-            const SCOPES = 'identify guilds activities.read';
+            const SCOPES = 'identify guilds';
 
             const backgrounds = [
                 { id: 1, style: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', name: 'Purple Dream' },
@@ -629,36 +655,106 @@
                 localStorage.removeItem('customBackground');
             };
 
-            // Buscar Rich Presence periodicamente
+            // Buscar Rich Presence via Lanyard WebSocket
             useEffect(() => {
-                if (!accessToken) return;
+                if (!userData?.id) return;
 
-                const fetchActivities = async () => {
-                    try {
-                        const response = await fetch('https://discord.com/api/users/@me/activities', {
-                            headers: {
-                                Authorization: `Bearer ${accessToken}`
-                            }
-                        });
-
-                        if (response.ok) {
-                            const data = await response.json();
-                            setActivities(data || []);
-                            
-                            // Detectar Spotify
-                            const spotify = data?.find(a => a.name === 'Spotify');
-                            setSpotifyData(spotify || null);
-                        }
-                    } catch (error) {
-                        console.error('Erro ao buscar atividades:', error);
+                const connectLanyard = () => {
+                    if (wsRef.current) {
+                        wsRef.current.close();
                     }
+
+                    const ws = new WebSocket('wss://api.lanyard.rest/socket');
+                    wsRef.current = ws;
+
+                    ws.onopen = () => {
+                        console.log('Conectado ao Lanyard');
+                    };
+
+                    ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.op === 1) {
+                            // Heartbeat
+                            setInterval(() => {
+                                if (ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({ op: 3 }));
+                                }
+                            }, data.d.heartbeat_interval);
+                            
+                            // Subscribe
+                            ws.send(JSON.stringify({
+                                op: 2,
+                                d: {
+                                    subscribe_to_id: userData.id
+                                }
+                            }));
+                        } else if (data.op === 0) {
+                            // Presence update
+                            setLanyardData(data.d);
+                            
+                            // Atualizar atividades
+                            if (data.d.activities) {
+                                setActivities(data.d.activities);
+                            }
+                            
+                            // Atualizar Spotify
+                            if (data.d.spotify) {
+                                setSpotifyData(data.d.spotify);
+                                updateSpotifyProgress(data.d.spotify);
+                            } else {
+                                setSpotifyData(null);
+                            }
+                        }
+                    };
+
+                    ws.onerror = (error) => {
+                        console.error('Erro Lanyard:', error);
+                    };
+
+                    ws.onclose = () => {
+                        console.log('Lanyard desconectado, reconectando...');
+                        setTimeout(connectLanyard, 5000);
+                    };
                 };
 
-                fetchActivities();
-                const interval = setInterval(fetchActivities, 5000); // Atualiza a cada 5 segundos
+                connectLanyard();
 
-                return () => clearInterval(interval);
-            }, [accessToken]);
+                return () => {
+                    if (wsRef.current) {
+                        wsRef.current.close();
+                    }
+                    if (progressIntervalRef.current) {
+                        clearInterval(progressIntervalRef.current);
+                    }
+                };
+            }, [userData]);
+
+            const updateSpotifyProgress = (spotify) => {
+                if (progressIntervalRef.current) {
+                    clearInterval(progressIntervalRef.current);
+                }
+
+                if (spotify) {
+                    const updateProgress = () => {
+                        const now = Date.now();
+                        const elapsed = now - spotify.timestamps.start;
+                        const duration = spotify.timestamps.end - spotify.timestamps.start;
+                        const progress = Math.min((elapsed / duration) * 100, 100);
+                        setSpotifyProgress(progress);
+                    };
+
+                    updateProgress();
+                    progressIntervalRef.current = setInterval(updateProgress, 1000);
+                }
+            };
+
+            const formatTime = (ms) => {
+                const seconds = Math.floor(ms / 1000);
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
 
             const getUserBadges = () => {
                 if (!userData?.public_flags) return [];
@@ -943,41 +1039,63 @@
                                 <div className="activity-card">
                                     <div className="activity-header">
                                         <img 
-                                            src={spotifyData.assets?.large_image?.replace('spotify:', 'https://i.scdn.co/image/') || ''}
+                                            src={spotifyData.album_art_url}
                                             alt="Spotify"
                                             className="activity-image"
                                         />
                                         <div className="activity-details">
-                                            <div className="activity-name">🎵 {spotifyData.details}</div>
-                                            <div className="activity-state">por {spotifyData.state}</div>
-                                            <div className="activity-info">{spotifyData.assets?.large_text}</div>
+                                            <div className="activity-name">🎵 {spotifyData.song}</div>
+                                            <div className="activity-state">por {spotifyData.artist}</div>
+                                            <div className="activity-info">{spotifyData.album}</div>
                                         </div>
+                                    </div>
+                                    <div className="timestamps">
+                                        {formatTime(Date.now() - spotifyData.timestamps.start)} / {formatTime(spotifyData.timestamps.end - spotifyData.timestamps.start)}
+                                    </div>
+                                    <div className="spotify-bar">
+                                        <div className="spotify-progress" style={{ width: `${spotifyProgress}%` }} />
                                     </div>
                                 </div>
                             )}
 
                             {/* Outras Atividades */}
-                            {activities.filter(a => a.type === 0).map((activity, idx) => (
-                                <div key={idx} className="activity-card">
-                                    <div className="activity-header">
-                                        {activity.assets?.large_image && (
-                                            <img 
-                                                src={activity.assets.large_image.startsWith('mp:')
-                                                    ? activity.assets.large_image.replace('mp:external/', 'https://media.discordapp.net/external/')
-                                                    : `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.png`
-                                                }
-                                                alt="Activity"
-                                                className="activity-image"
-                                            />
-                                        )}
-                                        <div className="activity-details">
-                                            <div className="activity-name">🎮 {activity.name}</div>
-                                            {activity.details && <div className="activity-state">{activity.details}</div>}
-                                            {activity.state && <div className="activity-info">{activity.state}</div>}
+                            {activities.filter(a => a.type === 0).map((activity, idx) => {
+                                const getActivityIcon = (activity) => {
+                                    if (activity.assets?.large_image) {
+                                        if (activity.assets.large_image.startsWith('mp:external')) {
+                                            return activity.assets.large_image.replace('mp:external/', 'https://media.discordapp.net/external/');
+                                        }
+                                        return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.png`;
+                                    }
+                                    return null;
+                                };
+                                
+                                const icon = getActivityIcon(activity);
+                                
+                                return (
+                                    <div key={idx} className="activity-card">
+                                        <div className="activity-header">
+                                            {icon && (
+                                                <img 
+                                                    src={icon}
+                                                    alt="Activity"
+                                                    className="activity-image"
+                                                />
+                                            )}
+                                            <div className="activity-details">
+                                                <div className="activity-name">🎮 {activity.name}</div>
+                                                {activity.details && <div className="activity-state">{activity.details}</div>}
+                                                {activity.state && <div className="activity-info">{activity.state}</div>}
+                                                {activity.timestamps?.start && (
+                                                    <div className="timestamps">
+                                                        ⏱️ {formatTime(Date.now() - activity.timestamps.start)} jogando
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
