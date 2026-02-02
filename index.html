@@ -527,9 +527,24 @@
             const [spotifyData, setSpotifyData] = useState(null);
             const [lanyardData, setLanyardData] = useState(null);
             const [spotifyProgress, setSpotifyProgress] = useState(0);
+            const [publicUserId, setPublicUserId] = useState(null);
+            const [isPublicView, setIsPublicView] = useState(false);
+            const [error, setError] = useState(null);
             const fileInputRef = React.useRef(null);
             const wsRef = React.useRef(null);
             const progressIntervalRef = React.useRef(null);
+
+            // Verificar se tem ID público na URL
+            useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const userId = urlParams.get('id');
+                
+                if (userId) {
+                    setPublicUserId(userId);
+                    setIsPublicView(true);
+                    fetchPublicUserData(userId);
+                }
+            }, []);
 
             // Configurações do Discord OAuth2
             const CLIENT_ID = '1467351282493947994';
@@ -630,6 +645,55 @@
                 setLoading(false);
             };
 
+            // Buscar dados de usuário público via Lanyard REST API
+            const fetchPublicUserData = async (userId) => {
+                try {
+                    setLoading(true);
+                    const response = await fetch(`https://api.lanyard.rest/v1/users/${userId}`);
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success) {
+                            const data = result.data;
+                            
+                            // Simular estrutura de userData
+                            setUserData({
+                                id: data.discord_user.id,
+                                username: data.discord_user.username,
+                                global_name: data.discord_user.global_name,
+                                discriminator: data.discord_user.discriminator,
+                                avatar: data.discord_user.avatar,
+                                public_flags: data.discord_user.public_flags,
+                                premium_type: data.discord_user.premium_type
+                            });
+                            
+                            setLanyardData(data);
+                            
+                            if (data.activities) {
+                                setActivities(data.activities);
+                            }
+                            
+                            if (data.spotify) {
+                                setSpotifyData(data.spotify);
+                                updateSpotifyProgress(data.spotify);
+                            }
+                            
+                            setLoading(false);
+                        } else {
+                            setError('Usuário não encontrado no Lanyard');
+                            setLoading(false);
+                        }
+                    } else {
+                        setError('Usuário não encontrado');
+                        setLoading(false);
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar usuário público:', error);
+                    setError('Erro ao carregar perfil');
+                    setLoading(false);
+                }
+            };
+
             const handleBackgroundChange = (bgId) => {
                 setBackground(bgId);
                 setCustomBackground(null);
@@ -657,7 +721,8 @@
 
             // Buscar Rich Presence via Lanyard WebSocket
             useEffect(() => {
-                if (!userData?.id) return;
+                const targetUserId = isPublicView ? publicUserId : userData?.id;
+                if (!targetUserId) return;
 
                 const connectLanyard = () => {
                     if (wsRef.current) {
@@ -686,7 +751,7 @@
                             ws.send(JSON.stringify({
                                 op: 2,
                                 d: {
-                                    subscribe_to_id: userData.id
+                                    subscribe_to_id: targetUserId
                                 }
                             }));
                         } else if (data.op === 0) {
@@ -728,7 +793,7 @@
                         clearInterval(progressIntervalRef.current);
                     }
                 };
-            }, [userData]);
+            }, [userData, isPublicView, publicUserId]);
 
             const updateSpotifyProgress = (spotify) => {
                 if (progressIntervalRef.current) {
@@ -814,7 +879,26 @@
                 );
             }
 
-            if (!accessToken || !userData) {
+            if (error) {
+                return (
+                    <div className="container">
+                        <div className="background" style={backgroundStyle} />
+                        <div className="noise" />
+                        <div className="content">
+                            <div className="login-card">
+                                <div style={{ textAlign: 'center', color: '#ed4245', fontSize: '1.2rem', marginBottom: '1rem' }}>
+                                    {error}
+                                </div>
+                                <div style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem' }}>
+                                    Verifique se o usuário entrou no servidor do Lanyard
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!accessToken && !isPublicView) {
                 return (
                     <div className="container">
                         <div className="background" style={backgroundStyle} />
@@ -840,12 +924,12 @@
                                 </button>
 
                                 <div className="info-box">
-                                    <strong>✨ Recursos:</strong>
+                                    <strong>Recursos:</strong>
                                     <ul className="feature-list">
-                                        <li>📊 Perfil completo do Discord</li>
-                                        <li>🏆 Todas as badges (incluindo Nitro!)</li>
-                                        <li>🎨 Backgrounds personalizáveis</li>
-                                        <li>👥 Lista de servidores</li>
+                                        <li>Perfil completo do Discord</li>
+                                        <li>Todas as badges (incluindo Nitro)</li>
+                                        <li>Backgrounds personalizáveis</li>
+                                        <li>Rich Presence em tempo real</li>
                                     </ul>
                                 </div>
                             </div>
@@ -854,7 +938,11 @@
                 );
             }
 
-            // Usuário logado - mostrar perfil
+            if (!userData) {
+                return null;
+            }
+
+            // Usuário logado OU visualização pública - mostrar perfil
             const avatarUrl = userData.avatar 
                 ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.${userData.avatar.startsWith('a_') ? 'gif' : 'png'}?size=256`
                 : 'https://cdn.discordapp.com/embed/avatars/0.png';
@@ -868,12 +956,14 @@
                     <div className="background" style={backgroundStyle} />
                     <div className="noise" />
                     
-                    <div className={`menu-toggle ${menuOpen ? 'open' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>
-                        {menuOpen ? '✕' : '⚙️'}
-                    </div>
+                    {!isPublicView && (
+                        <>
+                            <div className={`menu-toggle ${menuOpen ? 'open' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>
+                                {menuOpen ? '✕' : '⚙'}
+                            </div>
 
-                    <div className={`customizer ${menuOpen ? 'open' : ''}`}>
-                        <h3>⚙️ Configurações</h3>
+                            <div className={`customizer ${menuOpen ? 'open' : ''}`}>
+                        <h3>Configurações</h3>
                         
                         <div className="section">
                             <button 
@@ -892,12 +982,79 @@
                                 onMouseOver={(e) => e.target.style.background = 'rgba(237, 66, 69, 0.3)'}
                                 onMouseOut={(e) => e.target.style.background = 'rgba(237, 66, 69, 0.2)'}
                             >
-                                🚪 Sair
+                                Sair
                             </button>
                         </div>
 
                         <div className="section">
-                            <div className="section-title">🖼️ Imagem de Fundo</div>
+                            <div className="section-title">Compartilhar Perfil</div>
+                            <div style={{
+                                padding: '0.75rem',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '8px',
+                                marginBottom: '0.5rem'
+                            }}>
+                                <div style={{ 
+                                    fontSize: '0.75rem', 
+                                    color: 'rgba(255, 255, 255, 0.5)',
+                                    marginBottom: '0.5rem'
+                                }}>
+                                    Link Público
+                                </div>
+                                <div style={{
+                                    display: 'flex',
+                                    gap: '0.5rem',
+                                    alignItems: 'center'
+                                }}>
+                                    <input 
+                                        type="text"
+                                        readOnly
+                                        value={`${window.location.origin}${window.location.pathname}?id=${userData.id}`}
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.5rem',
+                                            background: 'rgba(0, 0, 0, 0.3)',
+                                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                                            borderRadius: '6px',
+                                            color: 'white',
+                                            fontSize: '0.8rem',
+                                            fontFamily: 'Space Mono, monospace'
+                                        }}
+                                        onClick={(e) => e.target.select()}
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?id=${userData.id}`);
+                                            alert('Link copiado!');
+                                        }}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            background: 'rgba(88, 101, 242, 0.2)',
+                                            border: '1px solid rgba(88, 101, 242, 0.4)',
+                                            borderRadius: '6px',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            fontWeight: '600',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        Copiar
+                                    </button>
+                                </div>
+                            </div>
+                            <div style={{
+                                fontSize: '0.75rem',
+                                color: 'rgba(255, 255, 255, 0.5)',
+                                lineHeight: '1.4'
+                            }}>
+                                Compartilhe este link para que outras pessoas vejam seu perfil
+                            </div>
+                        </div>
+
+                        <div className="section">
+                            <div className="section-title">Imagem de Fundo</div>
                             
                             <input 
                                 type="file" 
@@ -969,12 +1126,12 @@
                                                 e.target.style.transform = 'scale(1)';
                                             }}
                                         >
-                                            🗑️ Remover
+                                            Remover
                                         </button>
                                     </>
                                 ) : (
                                     <>
-                                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+                                        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>+</div>
                                         <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
                                             Clique para fazer upload
                                         </div>
@@ -987,7 +1144,7 @@
                         </div>
 
                         <div className="section">
-                            <div className="section-title">🎨 Gradientes</div>
+                            <div className="section-title">Gradientes</div>
                             <div className="bg-options">
                                 {backgrounds.map(bg => (
                                     <div
@@ -1001,13 +1158,14 @@
                             </div>
                         </div>
                     </div>
+                        </>
+                    )}
 
                     <div className="content">
                         <div className="profile-card">
                             <div className="avatar-container">
                                 <div className="avatar-wrapper">
                                     <img src={avatarUrl} alt="Avatar" className="avatar" />
-                                    <div className="status-indicator online" />
                                 </div>
                             </div>
 
@@ -1044,7 +1202,7 @@
                                             className="activity-image"
                                         />
                                         <div className="activity-details">
-                                            <div className="activity-name">🎵 {spotifyData.song}</div>
+                                            <div className="activity-name">{spotifyData.song}</div>
                                             <div className="activity-state">por {spotifyData.artist}</div>
                                             <div className="activity-info">{spotifyData.album}</div>
                                         </div>
@@ -1083,12 +1241,12 @@
                                                 />
                                             )}
                                             <div className="activity-details">
-                                                <div className="activity-name">🎮 {activity.name}</div>
+                                                <div className="activity-name">{activity.name}</div>
                                                 {activity.details && <div className="activity-state">{activity.details}</div>}
                                                 {activity.state && <div className="activity-info">{activity.state}</div>}
                                                 {activity.timestamps?.start && (
                                                     <div className="timestamps">
-                                                        ⏱️ {formatTime(Date.now() - activity.timestamps.start)} jogando
+                                                        {formatTime(Date.now() - activity.timestamps.start)} jogando
                                                     </div>
                                                 )}
                                             </div>
