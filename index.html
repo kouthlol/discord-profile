@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Profile Live - OAuth</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            min-height: 100vh;
+            position: relative;
+            transition: background 0.5s ease;
+        }
+
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: inherit;
+            filter: blur(100px);
+            opacity: 0.6;
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .login-card, .profile-card {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                        0 0 0 1px rgba(255, 255, 255, 0.05),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1rem;
+        }
+
+        .discord-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, #5865F2, #7289DA);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 8px 24px rgba(88, 101, 242, 0.4);
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #5865F2, #7289DA);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 16px rgba(88, 101, 242, 0.3);
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .info-box {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: white;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-list {
+            margin-top: 0.5rem;
+            padding-left: 1.25rem;
+        }
+
+        .feature-list li {
+            margin-bottom: 0.25rem;
+        }
+
+        .warning {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(237, 66, 69, 0.1);
+            border: 1px solid rgba(237, 66, 69, 0.3);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: center;
+        }
+
+        .setup-instructions {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .setup-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .setup-steps {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.8;
+        }
+
+        .setup-steps ol {
+            padding-left: 1.5rem;
+        }
+
+        .setup-steps li {
+            margin-bottom: 0.75rem;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            margin: 0.5rem 0;
+            color: #4ade80;
+            word-break: break-all;
+        }
+
+        .highlight {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        .profile-card {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(40px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 1.75rem;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+                        0 0 0 1px rgba(255, 255, 255, 0.05),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 1.25rem;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .avatar-wrapper:hover .avatar {
+            transform: scale(1.05);
+        }
+
+        .status-indicator {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid rgba(0, 0, 0, 0.8);
+            background: #747f8d;
+            z-index: 3;
+        }
+
+        .status-indicator.online { background: #3ba55d; }
+
+        .user-info {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .username {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 0.3rem;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .discriminator {
+            font-family: 'Space Mono', monospace;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.85rem;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 0.4rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            width: 22px;
+            height: 22px;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .badge:hover {
+            transform: scale(1.15);
+        }
+
+        .customizer {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            height: 100vh;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(40px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem 1.5rem;
+            width: 320px;
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+            transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+        }
+
+        .customizer.open {
+            right: 0;
+        }
+
+        .customizer h3 {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bg-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .bg-option {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bg-option:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .bg-option.active {
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .menu-toggle {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 11;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 1.5rem;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .menu-toggle:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .menu-toggle.open {
+            right: 336px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function DiscordOAuthProfile() {
+            const [accessToken, setAccessToken] = useState(null);
+            const [userData, setUserData] = useState(null);
+            const [guilds, setGuilds] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [background, setBackground] = useState(
+                parseInt(localStorage.getItem('selectedBg')) || 1
+            );
+            const [customBackground, setCustomBackground] = useState(
+                localStorage.getItem('customBackground') || null
+            );
+            const [menuOpen, setMenuOpen] = useState(false);
+
+            // Configurações do Discord OAuth2
+            const CLIENT_ID = '1467351282493947994';
+            const REDIRECT_URI = window.location.origin + window.location.pathname;
+            const SCOPES = 'identify guilds guilds.members.read';
+
+            const backgrounds = [
+                { id: 1, style: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', name: 'Purple Dream' },
+                { id: 2, style: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', name: 'Pink Sunset' },
+                { id: 3, style: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', name: 'Ocean Blue' },
+                { id: 4, style: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', name: 'Mint Fresh' },
+                { id: 5, style: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', name: 'Peach Glow' },
+                { id: 6, style: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', name: 'Deep Ocean' },
+                { id: 7, style: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', name: 'Cotton Candy' },
+                { id: 8, style: 'linear-gradient(135deg, #ff9a56 0%, #ff6a88 50%, #c060ff 100%)', name: 'Neon Sunset' },
+                { id: 9, style: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', name: 'Dark Night' },
+            ];
+
+            // Verificar token na URL
+            useEffect(() => {
+                const hash = window.location.hash;
+                if (hash) {
+                    const params = new URLSearchParams(hash.substring(1));
+                    const token = params.get('access_token');
+                    
+                    if (token) {
+                        setAccessToken(token);
+                        localStorage.setItem('discord_token', token);
+                        window.location.hash = ''; // Limpar URL
+                    }
+                } else {
+                    const savedToken = localStorage.getItem('discord_token');
+                    if (savedToken) {
+                        setAccessToken(savedToken);
+                    } else {
+                        setLoading(false);
+                    }
+                }
+            }, []);
+
+            // Buscar dados do usuário
+            useEffect(() => {
+                if (accessToken) {
+                    fetchUserData();
+                    fetchGuilds();
+                }
+            }, [accessToken]);
+
+            const fetchUserData = async () => {
+                try {
+                    const response = await fetch('https://discord.com/api/users/@me', {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setUserData(data);
+                        setLoading(false);
+                    } else if (response.status === 401) {
+                        // Token inválido
+                        handleLogout();
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar dados:', error);
+                    setLoading(false);
+                }
+            };
+
+            const fetchGuilds = async () => {
+                try {
+                    const response = await fetch('https://discord.com/api/users/@me/guilds', {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setGuilds(data);
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar servidores:', error);
+                }
+            };
+
+            const handleLogin = () => {
+                const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(SCOPES)}`;
+                window.location.href = authUrl;
+            };
+
+            const handleLogout = () => {
+                localStorage.removeItem('discord_token');
+                setAccessToken(null);
+                setUserData(null);
+                setGuilds([]);
+                setLoading(false);
+            };
+
+            const handleBackgroundChange = (bgId) => {
+                setBackground(bgId);
+                setCustomBackground(null);
+                localStorage.setItem('selectedBg', bgId);
+                localStorage.removeItem('customBackground');
+            };
+
+            const getUserBadges = () => {
+                if (!userData?.public_flags) return [];
+                
+                const badges = [];
+                const flags = userData.public_flags;
+
+                const badgeMap = {
+                    1: { name: 'Discord Staff', icon: 'https://cdn.discordapp.com/badge-icons/5e74e9b61934fc1f67c65515d1f7e60d.png' },
+                    2: { name: 'Partnered Server Owner', icon: 'https://cdn.discordapp.com/badge-icons/3f9748e53446a137a052f3454e2de41e.png' },
+                    4: { name: 'HypeSquad Events', icon: 'https://cdn.discordapp.com/badge-icons/bf01d1073931f921909045f3a39fd264.png' },
+                    64: { name: 'HypeSquad Bravery', icon: 'https://cdn.discordapp.com/badge-icons/8a88d63823d8a71cd5e390baa45efa02.png' },
+                    128: { name: 'HypeSquad Brilliance', icon: 'https://cdn.discordapp.com/badge-icons/011940fd013da3f7fb926e4a1cd2e618.png' },
+                    256: { name: 'HypeSquad Balance', icon: 'https://cdn.discordapp.com/badge-icons/3aa41de486fa12454c3761e8e223442e.png' },
+                    8: { name: 'Bug Hunter Level 1', icon: 'https://cdn.discordapp.com/badge-icons/2717692c7dca7289b35297368a940dd0.png' },
+                    16384: { name: 'Bug Hunter Level 2', icon: 'https://cdn.discordapp.com/badge-icons/848f79194d4be5ff5f81505cbd0ce1e6.png' },
+                    4194304: { name: 'Active Developer', icon: 'https://cdn.discordapp.com/badge-icons/6bdc42827a38498929a4920da12695d9.png' },
+                    131072: { name: 'Early Verified Bot Developer', icon: 'https://cdn.discordapp.com/badge-icons/6df5892e0f35b051f8b61eace34f4967.png' },
+                    512: { name: 'Early Supporter', icon: 'https://cdn.discordapp.com/badge-icons/7060786766c9c840eb3019e725d2b358.png' }
+                };
+
+                Object.keys(badgeMap).forEach(flag => {
+                    if (flags & parseInt(flag)) {
+                        badges.push(badgeMap[flag]);
+                    }
+                });
+
+                // Nitro badge
+                if (userData.premium_type === 1 || userData.premium_type === 2 || userData.premium_type === 3) {
+                    badges.push({ 
+                        name: 'Discord Nitro', 
+                        icon: 'https://cdn.discordapp.com/badge-icons/2ba85e8026a8614b640c2837bcdfe21b.png' 
+                    });
+                }
+
+                return badges;
+            };
+
+            const selectedBg = backgrounds.find(bg => bg.id === background);
+            const backgroundStyle = customBackground 
+                ? { backgroundImage: `url(${customBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                : { background: selectedBg.style };
+
+            if (loading) {
+                return (
+                    <div className="container">
+                        <div className="background" style={backgroundStyle} />
+                        <div className="noise" />
+                        <div className="content">
+                            <div className="login-card">
+                                <div style={{ textAlign: 'center', color: 'white', fontSize: '1.2rem' }}>
+                                    Carregando...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!accessToken || !userData) {
+                return (
+                    <div className="container">
+                        <div className="background" style={backgroundStyle} />
+                        <div className="noise" />
+                        
+                        <div className="content">
+                            <div className="login-card">
+                                <div className="login-header">
+                                    <div className="discord-logo">
+                                        <svg width="48" height="48" viewBox="0 0 71 55" fill="white">
+                                            <path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z"/>
+                                        </svg>
+                                    </div>
+                                    <div className="login-title">Discord Profile Live</div>
+                                    <div className="login-subtitle">Conecte-se com o Discord</div>
+                                </div>
+
+                                <button className="login-button" onClick={handleLogin}>
+                                    <svg width="24" height="24" viewBox="0 0 71 55" fill="currentColor">
+                                        <path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z"/>
+                                    </svg>
+                                    Entrar com Discord
+                                </button>
+
+                                <div className="info-box">
+                                    <strong>✨ Recursos:</strong>
+                                    <ul className="feature-list">
+                                        <li>📊 Perfil completo do Discord</li>
+                                        <li>🏆 Todas as badges (incluindo Nitro!)</li>
+                                        <li>🎨 Backgrounds personalizáveis</li>
+                                        <li>👥 Lista de servidores</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Usuário logado - mostrar perfil
+            const avatarUrl = userData.avatar 
+                ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.${userData.avatar.startsWith('a_') ? 'gif' : 'png'}?size=256`
+                : 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+            const bannerUrl = userData.banner
+                ? `https://cdn.discordapp.com/banners/${userData.id}/${userData.banner}.${userData.banner.startsWith('a_') ? 'gif' : 'png'}?size=600`
+                : null;
+
+            return (
+                <div className="container">
+                    <div className="background" style={backgroundStyle} />
+                    <div className="noise" />
+                    
+                    <div className={`menu-toggle ${menuOpen ? 'open' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>
+                        {menuOpen ? '✕' : '⚙️'}
+                    </div>
+
+                    <div className={`customizer ${menuOpen ? 'open' : ''}`}>
+                        <h3>⚙️ Configurações</h3>
+                        
+                        <div className="section">
+                            <button 
+                                onClick={handleLogout}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    background: 'rgba(237, 66, 69, 0.2)',
+                                    border: '1px solid rgba(237, 66, 69, 0.4)',
+                                    borderRadius: '8px',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                    transition: 'all 0.3s ease'
+                                }}
+                                onMouseOver={(e) => e.target.style.background = 'rgba(237, 66, 69, 0.3)'}
+                                onMouseOut={(e) => e.target.style.background = 'rgba(237, 66, 69, 0.2)'}
+                            >
+                                🚪 Sair
+                            </button>
+                        </div>
+
+                        <div className="section">
+                            <div className="section-title">🎨 Gradientes</div>
+                            <div className="bg-options">
+                                {backgrounds.map(bg => (
+                                    <div
+                                        key={bg.id}
+                                        className={`bg-option ${background === bg.id && !customBackground ? 'active' : ''}`}
+                                        style={{ background: bg.style }}
+                                        onClick={() => handleBackgroundChange(bg.id)}
+                                        title={bg.name}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="content">
+                        <div className="profile-card">
+                            {bannerUrl && (
+                                <div style={{
+                                    width: 'calc(100% + 3.5rem)',
+                                    height: '120px',
+                                    margin: '-1.75rem -1.75rem 1rem -1.75rem',
+                                    borderRadius: '24px 24px 0 0',
+                                    backgroundImage: `url(${bannerUrl})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center'
+                                }} />
+                            )}
+
+                            <div className="avatar-container">
+                                <div className="avatar-wrapper">
+                                    <img src={avatarUrl} alt="Avatar" className="avatar" />
+                                    <div className="status-indicator online" />
+                                </div>
+                            </div>
+
+                            <div className="user-info">
+                                <div className="username">
+                                    {userData.global_name || userData.username}
+                                </div>
+                                <div className="discriminator">
+                                    @{userData.username}
+                                </div>
+
+                                {getUserBadges().length > 0 && (
+                                    <div className="badges">
+                                        {getUserBadges().map((badge, idx) => (
+                                            <img 
+                                                key={idx}
+                                                src={badge.icon}
+                                                alt={badge.name}
+                                                title={badge.name}
+                                                className="badge"
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {guilds.length > 0 && (
+                                <div style={{ marginTop: '1.5rem' }}>
+                                    <div style={{ 
+                                        color: 'rgba(255, 255, 255, 0.7)', 
+                                        fontSize: '0.85rem', 
+                                        fontWeight: '600',
+                                        marginBottom: '0.75rem',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        👥 Servidores ({guilds.length})
+                                    </div>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))',
+                                        gap: '0.5rem'
+                                    }}>
+                                        {guilds.slice(0, 12).map(guild => (
+                                            <div
+                                                key={guild.id}
+                                                title={guild.name}
+                                                style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '50%',
+                                                    background: guild.icon 
+                                                        ? `url(https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64)`
+                                                        : '#5865F2',
+                                                    backgroundSize: 'cover',
+                                                    backgroundPosition: 'center',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: 'white',
+                                                    fontWeight: '700',
+                                                    fontSize: '0.9rem',
+                                                    cursor: 'pointer',
+                                                    transition: 'transform 0.2s ease',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                                                }}
+                                                onMouseOver={(e) => e.target.style.transform = 'scale(1.1)'}
+                                                onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                                            >
+                                                {!guild.icon && guild.name.charAt(0)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<DiscordOAuthProfile />, document.getElementById('root'));
+    </script>
+</body>
+</html>
