@@ -35,7 +35,7 @@
             width: 100%;
             height: 100%;
             z-index: 0;
-            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.6s ease;
         }
 
         .background::before {
@@ -301,7 +301,9 @@
                         0 0 0 1px rgba(255, 255, 255, 0.05),
                         inset 0 1px 0 rgba(255, 255, 255, 0.1);
             animation: fadeInScale 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                        box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
         }
 
         .profile-card:hover {
@@ -328,7 +330,9 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                        box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
         }
 
         .avatar-wrapper:hover {
@@ -341,7 +345,8 @@
             height: 100%;
             object-fit: cover;
             border-radius: 50%;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
         }
 
         .avatar-wrapper:hover .avatar {
@@ -393,9 +398,11 @@
         .badge {
             width: 22px;
             height: 22px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                        filter 0.25s ease;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
             animation: fadeInScale 0.5s ease backwards;
+            will-change: transform;
         }
 
         .badge:nth-child(1) { animation-delay: 0.1s; }
@@ -405,7 +412,7 @@
         .badge:nth-child(5) { animation-delay: 0.3s; }
 
         .badge:hover {
-            transform: scale(1.25) translateY(-2px);
+            transform: scale(1.2) translateY(-2px);
             filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4)) brightness(1.1);
         }
 
@@ -608,27 +615,35 @@
 
         .heart {
             position: absolute;
-            width: 20px;
-            height: 20px;
-            opacity: 0.6;
-            animation: floatHeart 10s infinite ease-in-out;
+            width: 15px;
+            height: 15px;
+            opacity: 0.5;
+            animation: floatHeart 8s infinite ease-in-out;
+            will-change: transform, opacity;
+            pointer-events: none;
         }
 
         @keyframes floatHeart {
             0% {
-                transform: translateY(100vh) rotate(0deg) scale(0);
+                transform: translateY(100vh) translateX(0) scale(0);
                 opacity: 0;
             }
+            5% {
+                opacity: 0.5;
+            }
             10% {
+                transform: translateY(90vh) translateX(10px) scale(1);
                 opacity: 0.6;
-                transform: translateY(90vh) rotate(45deg) scale(1);
             }
             90% {
-                opacity: 0.6;
-                transform: translateY(10vh) rotate(315deg) scale(1);
+                opacity: 0.5;
+                transform: translateY(10vh) translateX(-10px) scale(1);
+            }
+            95% {
+                opacity: 0.2;
             }
             100% {
-                transform: translateY(-10vh) rotate(360deg) scale(0);
+                transform: translateY(-10vh) translateX(0) scale(0);
                 opacity: 0;
             }
         }
@@ -711,8 +726,10 @@
             height: 20px;
             background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(0, 212, 255, 0.3));
             border-radius: 50%;
-            opacity: 0.6;
-            animation: floatBubble 10s infinite ease-in;
+            opacity: 0.5;
+            animation: floatBubble 8s infinite ease-in;
+            will-change: transform, opacity;
+            pointer-events: none;
         }
 
         @keyframes floatBubble {
@@ -721,13 +738,13 @@
                 opacity: 0;
             }
             10% {
-                opacity: 0.6;
+                opacity: 0.5;
             }
             90% {
-                opacity: 0.6;
+                opacity: 0.4;
             }
             100% {
-                transform: translateY(-100vh) translateX(50px);
+                transform: translateY(-100vh) translateX(30px);
                 opacity: 0;
             }
         }
@@ -892,6 +909,18 @@
             const fileInputRef = React.useRef(null);
             const wsRef = React.useRef(null);
             const progressIntervalRef = React.useRef(null);
+
+            // Limpar efeitos de temas anteriores ao trocar
+            useEffect(() => {
+                // Forçar re-render do background ao trocar tema
+                const container = document.querySelector('.container');
+                if (container) {
+                    container.style.opacity = '0.99';
+                    setTimeout(() => {
+                        container.style.opacity = '1';
+                    }, 10);
+                }
+            }, [currentTheme]);
 
             // Verificar se tem ID público na URL
             useEffect(() => {
@@ -1510,23 +1539,23 @@
                 : null;
 
             return (
-                <div className="container">
+                <div className="container" key={currentTheme}>
                     <div className="background" style={backgroundStyle} />
                     <div className="noise" />
                     
                     {currentTheme === 'hellokitty' && (
                         <div className="hello-kitty-hearts">
-                            {[...Array(15)].map((_, i) => (
+                            {[...Array(8)].map((_, i) => (
                                 <div
                                     key={i}
                                     className="heart"
                                     style={{
                                         left: `${Math.random() * 100}%`,
-                                        animationDelay: `${Math.random() * 10}s`,
-                                        animationDuration: `${8 + Math.random() * 6}s`
+                                        animationDelay: `${Math.random() * 8}s`,
+                                        animationDuration: `${6 + Math.random() * 4}s`
                                     }}
                                 >
-                                    <svg viewBox="0 0 32 32" fill="#FF69B4" opacity="0.7">
+                                    <svg viewBox="0 0 32 32" fill="#FF69B4" opacity="0.8">
                                         <path d="M16,28.261c0,0-14-7.926-14-17.046c0-9.356,13.159-10.399,14-0.454c1.011-9.938,14-8.903,14,0.454 C30,20.335,16,28.261,16,28.261z"/>
                                     </svg>
                                 </div>
@@ -1540,16 +1569,16 @@
 
                     {currentTheme === 'ocean' && (
                         <div className="ocean-bubbles">
-                            {[...Array(12)].map((_, i) => (
+                            {[...Array(8)].map((_, i) => (
                                 <div
                                     key={i}
                                     className="bubble"
                                     style={{
                                         left: `${Math.random() * 100}%`,
-                                        width: `${15 + Math.random() * 25}px`,
-                                        height: `${15 + Math.random() * 25}px`,
-                                        animationDelay: `${Math.random() * 8}s`,
-                                        animationDuration: `${8 + Math.random() * 8}s`
+                                        width: `${12 + Math.random() * 18}px`,
+                                        height: `${12 + Math.random() * 18}px`,
+                                        animationDelay: `${Math.random() * 6}s`,
+                                        animationDuration: `${6 + Math.random() * 6}s`
                                     }}
                                 />
                             ))}
