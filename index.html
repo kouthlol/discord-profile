@@ -667,6 +667,75 @@
             width: 40%;
             margin: 0 auto;
         }
+
+        /* Efeito Scanlines Cyberpunk */
+        .cyberpunk-scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 255, 0.03) 0px,
+                transparent 1px,
+                transparent 2px,
+                rgba(0, 255, 255, 0.03) 3px
+            );
+            animation: scanlines 8s linear infinite;
+        }
+
+        @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+
+        /* Bolhas Ocean */
+        .ocean-bubbles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -100px;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), rgba(0, 212, 255, 0.3));
+            border-radius: 50%;
+            opacity: 0.6;
+            animation: floatBubble 10s infinite ease-in;
+        }
+
+        @keyframes floatBubble {
+            0% {
+                transform: translateY(0) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.6;
+            }
+            90% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translateY(-100vh) translateX(50px);
+                opacity: 0;
+            }
+        }
+
+        /* Text Shadow para tema Cyberpunk */
+        .text-glow {
+            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+        }
     </style>
 </head>
 <body>
@@ -764,6 +833,83 @@
                         badgeFilter: 'hue-rotate(330deg) saturate(1.5)',
                         avatarBorder: '4px solid #FF1493',
                         cardShadow: '0 8px 32px rgba(255, 20, 147, 0.3), 0 0 0 1px rgba(255, 105, 180, 0.2)',
+                    }
+                },
+                cyberpunk: {
+                    name: 'Cyberpunk',
+                    background: `
+                        #0a0a0a url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='grid' width='50' height='50' patternUnits='userSpaceOnUse'%3E%3Cpath d='M 50 0 L 0 0 0 50' fill='none' stroke='%2300ffff' stroke-width='0.5' opacity='0.3'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23grid)'/%3E%3C/svg%3E")
+                    `,
+                    cardBg: 'rgba(10, 10, 10, 0.9)',
+                    cardBorder: 'rgba(0, 255, 255, 0.5)',
+                    textPrimary: '#00ffff',
+                    textSecondary: '#ff00ff',
+                    textTertiary: '#ffff00',
+                    accent: '#00ffff',
+                    spotifyBar: 'linear-gradient(90deg, #00ffff, #ff00ff)',
+                    activityBg: 'rgba(0, 255, 255, 0.05)',
+                    activityBorder: 'rgba(0, 255, 255, 0.3)',
+                    customStyles: {
+                        fontFamily: "'Courier New', 'Consolas', monospace",
+                        cardShadow: '0 0 30px rgba(0, 255, 255, 0.3), 0 8px 32px rgba(0, 0, 0, 0.8)',
+                        avatarBorder: '3px solid #00ffff',
+                        textShadow: '0 0 10px currentColor',
+                    }
+                },
+                minimal: {
+                    name: 'Minimalista',
+                    background: '#f5f5f5',
+                    cardBg: 'rgba(255, 255, 255, 0.95)',
+                    cardBorder: 'rgba(0, 0, 0, 0.1)',
+                    textPrimary: '#1a1a1a',
+                    textSecondary: '#666666',
+                    textTertiary: '#999999',
+                    accent: '#1a1a1a',
+                    spotifyBar: 'linear-gradient(90deg, #1a1a1a, #666666)',
+                    activityBg: 'rgba(0, 0, 0, 0.03)',
+                    activityBorder: 'rgba(0, 0, 0, 0.08)',
+                    customStyles: {
+                        fontFamily: "'Inter', 'Helvetica Neue', sans-serif",
+                        cardShadow: '0 2px 20px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                        avatarBorder: '2px solid #1a1a1a',
+                    }
+                },
+                darkpremium: {
+                    name: 'Dark Premium',
+                    background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)',
+                    cardBg: 'rgba(20, 20, 20, 0.95)',
+                    cardBorder: 'rgba(212, 175, 55, 0.3)',
+                    textPrimary: '#D4AF37',
+                    textSecondary: '#ffffff',
+                    textTertiary: 'rgba(255, 255, 255, 0.6)',
+                    accent: '#D4AF37',
+                    spotifyBar: 'linear-gradient(90deg, #D4AF37, #FFD700)',
+                    activityBg: 'rgba(212, 175, 55, 0.05)',
+                    activityBorder: 'rgba(212, 175, 55, 0.2)',
+                    customStyles: {
+                        fontFamily: "'Playfair Display', 'Georgia', serif",
+                        cardShadow: '0 8px 32px rgba(212, 175, 55, 0.2), 0 0 0 1px rgba(212, 175, 55, 0.1)',
+                        avatarBorder: '3px solid #D4AF37',
+                        badgeFilter: 'brightness(1.3) saturate(1.2)',
+                    }
+                },
+                ocean: {
+                    name: 'Ocean',
+                    background: `
+                        linear-gradient(135deg, #0077be 0%, #00a8cc 50%, #0096c7 100%)
+                    `,
+                    cardBg: 'rgba(0, 119, 190, 0.25)',
+                    cardBorder: 'rgba(0, 168, 204, 0.4)',
+                    textPrimary: '#ffffff',
+                    textSecondary: '#b3e5fc',
+                    textTertiary: 'rgba(255, 255, 255, 0.7)',
+                    accent: '#00d4ff',
+                    spotifyBar: 'linear-gradient(90deg, #00d4ff, #00ffcc)',
+                    activityBg: 'rgba(0, 212, 255, 0.1)',
+                    activityBorder: 'rgba(0, 212, 255, 0.3)',
+                    customStyles: {
+                        cardShadow: '0 8px 32px rgba(0, 119, 190, 0.4), 0 0 0 1px rgba(0, 168, 204, 0.2)',
+                        avatarBorder: '3px solid #00d4ff',
                     }
                 }
             };
@@ -1197,6 +1343,28 @@
                             ))}
                         </div>
                     )}
+
+                    {currentTheme === 'cyberpunk' && (
+                        <div className="cyberpunk-scanlines" />
+                    )}
+
+                    {currentTheme === 'ocean' && (
+                        <div className="ocean-bubbles">
+                            {[...Array(12)].map((_, i) => (
+                                <div
+                                    key={i}
+                                    className="bubble"
+                                    style={{
+                                        left: `${Math.random() * 100}%`,
+                                        width: `${15 + Math.random() * 25}px`,
+                                        height: `${15 + Math.random() * 25}px`,
+                                        animationDelay: `${Math.random() * 8}s`,
+                                        animationDuration: `${8 + Math.random() * 8}s`
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    )}
                     
                     {!isPublicView && (
                         <>
@@ -1485,7 +1653,12 @@
                             </div>
 
                             <div className="user-info">
-                                <div className="username" style={{ color: activeTheme.textPrimary }}>
+                                <div className="username" style={{ 
+                                    color: activeTheme.textPrimary,
+                                    ...(activeTheme.customStyles?.textShadow && { 
+                                        textShadow: activeTheme.customStyles.textShadow 
+                                    })
+                                }}>
                                     {userData.global_name || userData.username}
                                 </div>
                                 <div className="discriminator" style={{ color: activeTheme.textTertiary }}>
