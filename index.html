@@ -736,6 +736,124 @@
         .text-glow {
             text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
         }
+
+        /* Theme Editor Modal */
+        .theme-editor-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .theme-editor {
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .theme-editor h2 {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+        }
+
+        .editor-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .editor-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .editor-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .editor-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .color-input {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .color-input input[type="color"] {
+            width: 60px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .editor-buttons {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        .editor-button {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .editor-button.primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .editor-button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .editor-button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .editor-button.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
     </style>
 </head>
 <body>
@@ -766,6 +884,11 @@
             const [publicUserId, setPublicUserId] = useState(null);
             const [isPublicView, setIsPublicView] = useState(false);
             const [error, setError] = useState(null);
+            const [showThemeEditor, setShowThemeEditor] = useState(false);
+            const [customThemes, setCustomThemes] = useState(
+                JSON.parse(localStorage.getItem('customThemes') || '{}')
+            );
+            const [editingTheme, setEditingTheme] = useState(null);
             const fileInputRef = React.useRef(null);
             const wsRef = React.useRef(null);
             const progressIntervalRef = React.useRef(null);
@@ -1060,6 +1183,72 @@
                 localStorage.removeItem('customBackground');
             };
 
+            const createNewTheme = () => {
+                const newTheme = {
+                    name: 'Meu Tema',
+                    background: '#667eea',
+                    cardBg: 'rgba(0, 0, 0, 0.4)',
+                    cardBorder: 'rgba(255, 255, 255, 0.1)',
+                    textPrimary: '#ffffff',
+                    textSecondary: 'rgba(255, 255, 255, 0.7)',
+                    textTertiary: 'rgba(255, 255, 255, 0.5)',
+                    accent: '#667eea',
+                    spotifyBar: 'linear-gradient(90deg, #1db954, #1ed760)',
+                    activityBg: 'rgba(255, 255, 255, 0.05)',
+                    activityBorder: 'rgba(255, 255, 255, 0.1)',
+                };
+                setEditingTheme(newTheme);
+                setShowThemeEditor(true);
+            };
+
+            const saveCustomTheme = (themeName, themeData) => {
+                const newCustomThemes = {
+                    ...customThemes,
+                    [`custom_${Date.now()}`]: { ...themeData, name: themeName }
+                };
+                setCustomThemes(newCustomThemes);
+                localStorage.setItem('customThemes', JSON.stringify(newCustomThemes));
+                setShowThemeEditor(false);
+                setEditingTheme(null);
+            };
+
+            const deleteCustomTheme = (themeId) => {
+                const newCustomThemes = { ...customThemes };
+                delete newCustomThemes[themeId];
+                setCustomThemes(newCustomThemes);
+                localStorage.setItem('customThemes', JSON.stringify(newCustomThemes));
+                if (currentTheme === themeId) {
+                    handleThemeChange('default');
+                }
+            };
+
+            const exportTheme = (themeId) => {
+                const allThemes = { ...themes, ...customThemes };
+                const theme = allThemes[themeId];
+                const themeCode = JSON.stringify(theme, null, 2);
+                navigator.clipboard.writeText(themeCode);
+                alert('Código do tema copiado!');
+            };
+
+            const importTheme = () => {
+                const code = prompt('Cole o código do tema:');
+                if (code) {
+                    try {
+                        const themeData = JSON.parse(code);
+                        const themeId = `custom_${Date.now()}`;
+                        const newCustomThemes = {
+                            ...customThemes,
+                            [themeId]: themeData
+                        };
+                        setCustomThemes(newCustomThemes);
+                        localStorage.setItem('customThemes', JSON.stringify(newCustomThemes));
+                        alert('Tema importado com sucesso!');
+                    } catch (e) {
+                        alert('Código inválido!');
+                    }
+                }
+            };
+
             const handleImageUpload = (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -1218,7 +1407,8 @@
             };
 
             const selectedBg = backgrounds.find(bg => bg.id === background);
-            const activeTheme = themes[currentTheme];
+            const allThemes = { ...themes, ...customThemes };
+            const activeTheme = allThemes[currentTheme] || themes.default;
             
             const backgroundStyle = customBackground 
                 ? { backgroundImage: `url(${customBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -1398,25 +1588,59 @@
 
                         <div className="section">
                             <div className="section-title">Temas</div>
+                            
+                            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                    onClick={createNewTheme}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.6rem',
+                                        background: 'rgba(102, 126, 234, 0.2)',
+                                        border: '1px solid rgba(102, 126, 234, 0.4)',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        fontSize: '0.8rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    + Criar Tema
+                                </button>
+                                <button
+                                    onClick={importTheme}
+                                    style={{
+                                        flex: 1,
+                                        padding: '0.6rem',
+                                        background: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        fontSize: '0.8rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Importar
+                                </button>
+                            </div>
+
                             <div style={{
                                 display: 'grid',
                                 gridTemplateColumns: '1fr',
                                 gap: '0.5rem'
                             }}>
-                                {Object.keys(themes).map(themeId => (
+                                {Object.keys(allThemes).map(themeId => (
                                     <div
                                         key={themeId}
-                                        onClick={() => handleThemeChange(themeId)}
                                         style={{
                                             padding: '1rem',
                                             background: currentTheme === themeId 
                                                 ? 'rgba(255, 255, 255, 0.15)' 
                                                 : 'rgba(255, 255, 255, 0.05)',
                                             border: currentTheme === themeId
-                                                ? `2px solid ${themes[themeId].accent}`
+                                                ? `2px solid ${allThemes[themeId].accent}`
                                                 : '2px solid rgba(255, 255, 255, 0.1)',
                                             borderRadius: '12px',
-                                            cursor: 'pointer',
                                             transition: 'all 0.3s ease',
                                             display: 'flex',
                                             alignItems: 'center',
@@ -1433,21 +1657,25 @@
                                             }
                                         }}
                                     >
-                                        <div style={{
-                                            width: '40px',
-                                            height: '40px',
-                                            borderRadius: '8px',
-                                            background: themes[themeId].background,
-                                            border: `2px solid ${themes[themeId].cardBorder}`,
-                                            flexShrink: 0
-                                        }} />
-                                        <div style={{ flex: 1 }}>
+                                        <div
+                                            onClick={() => handleThemeChange(themeId)}
+                                            style={{
+                                                width: '40px',
+                                                height: '40px',
+                                                borderRadius: '8px',
+                                                background: allThemes[themeId].background,
+                                                border: `2px solid ${allThemes[themeId].cardBorder}`,
+                                                flexShrink: 0,
+                                                cursor: 'pointer'
+                                            }}
+                                        />
+                                        <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => handleThemeChange(themeId)}>
                                             <div style={{
                                                 color: 'white',
                                                 fontWeight: '600',
                                                 marginBottom: '0.2rem'
                                             }}>
-                                                {themes[themeId].name}
+                                                {allThemes[themeId].name}
                                             </div>
                                             <div style={{
                                                 fontSize: '0.75rem',
@@ -1456,6 +1684,48 @@
                                                 {currentTheme === themeId ? 'Ativo' : 'Clique para ativar'}
                                             </div>
                                         </div>
+                                        {themeId.startsWith('custom_') && (
+                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        exportTheme(themeId);
+                                                    }}
+                                                    style={{
+                                                        padding: '0.4rem 0.6rem',
+                                                        background: 'rgba(102, 126, 234, 0.2)',
+                                                        border: '1px solid rgba(102, 126, 234, 0.4)',
+                                                        borderRadius: '6px',
+                                                        color: 'white',
+                                                        fontSize: '0.7rem',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    title="Exportar código"
+                                                >
+                                                    📋
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm('Deletar este tema?')) {
+                                                            deleteCustomTheme(themeId);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        padding: '0.4rem 0.6rem',
+                                                        background: 'rgba(237, 66, 69, 0.2)',
+                                                        border: '1px solid rgba(237, 66, 69, 0.4)',
+                                                        borderRadius: '6px',
+                                                        color: 'white',
+                                                        fontSize: '0.7rem',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                    title="Deletar tema"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -1918,6 +2188,117 @@
                             })}
                         </div>
                     </div>
+
+                    {showThemeEditor && editingTheme && (
+                        <div className="theme-editor-overlay" onClick={() => setShowThemeEditor(false)}>
+                            <div className="theme-editor" onClick={(e) => e.stopPropagation()}>
+                                <h2>Criar Tema Customizado</h2>
+                                
+                                <div className="editor-group">
+                                    <label className="editor-label">Nome do Tema</label>
+                                    <input
+                                        type="text"
+                                        className="editor-input"
+                                        value={editingTheme.name}
+                                        onChange={(e) => setEditingTheme({...editingTheme, name: e.target.value})}
+                                        placeholder="Ex: Meu Tema Incrível"
+                                    />
+                                </div>
+
+                                <div className="editor-group">
+                                    <label className="editor-label">Cor de Fundo</label>
+                                    <div className="color-input">
+                                        <input
+                                            type="color"
+                                            value={editingTheme.background.startsWith('#') ? editingTheme.background : '#667eea'}
+                                            onChange={(e) => setEditingTheme({...editingTheme, background: e.target.value})}
+                                        />
+                                        <input
+                                            type="text"
+                                            className="editor-input"
+                                            value={editingTheme.background}
+                                            onChange={(e) => setEditingTheme({...editingTheme, background: e.target.value})}
+                                            placeholder="#667eea ou gradient"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="editor-group">
+                                    <label className="editor-label">Cor do Card</label>
+                                    <input
+                                        type="text"
+                                        className="editor-input"
+                                        value={editingTheme.cardBg}
+                                        onChange={(e) => setEditingTheme({...editingTheme, cardBg: e.target.value})}
+                                        placeholder="rgba(0, 0, 0, 0.4)"
+                                    />
+                                </div>
+
+                                <div className="editor-group">
+                                    <label className="editor-label">Cor de Texto Principal</label>
+                                    <div className="color-input">
+                                        <input
+                                            type="color"
+                                            value={editingTheme.textPrimary.startsWith('#') ? editingTheme.textPrimary : '#ffffff'}
+                                            onChange={(e) => setEditingTheme({...editingTheme, textPrimary: e.target.value})}
+                                        />
+                                        <input
+                                            type="text"
+                                            className="editor-input"
+                                            value={editingTheme.textPrimary}
+                                            onChange={(e) => setEditingTheme({...editingTheme, textPrimary: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="editor-group">
+                                    <label className="editor-label">Cor de Texto Secundário</label>
+                                    <input
+                                        type="text"
+                                        className="editor-input"
+                                        value={editingTheme.textSecondary}
+                                        onChange={(e) => setEditingTheme({...editingTheme, textSecondary: e.target.value})}
+                                        placeholder="rgba(255, 255, 255, 0.7)"
+                                    />
+                                </div>
+
+                                <div className="editor-group">
+                                    <label className="editor-label">Cor de Destaque (Accent)</label>
+                                    <div className="color-input">
+                                        <input
+                                            type="color"
+                                            value={editingTheme.accent.startsWith('#') ? editingTheme.accent : '#667eea'}
+                                            onChange={(e) => setEditingTheme({...editingTheme, accent: e.target.value})}
+                                        />
+                                        <input
+                                            type="text"
+                                            className="editor-input"
+                                            value={editingTheme.accent}
+                                            onChange={(e) => setEditingTheme({...editingTheme, accent: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="editor-buttons">
+                                    <button 
+                                        className="editor-button secondary"
+                                        onClick={() => {
+                                            setShowThemeEditor(false);
+                                            setEditingTheme(null);
+                                        }}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        className="editor-button primary"
+                                        onClick={() => saveCustomTheme(editingTheme.name, editingTheme)}
+                                    >
+                                        Salvar Tema
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
