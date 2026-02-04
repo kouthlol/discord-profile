@@ -906,6 +906,8 @@
                 JSON.parse(localStorage.getItem('customThemes') || '{}')
             );
             const [editingTheme, setEditingTheme] = useState(null);
+            const [screenshotMode, setScreenshotMode] = useState(false);
+            const [showThemesSection, setShowThemesSection] = useState(false);
             const fileInputRef = React.useRef(null);
             const wsRef = React.useRef(null);
             const progressIntervalRef = React.useRef(null);
@@ -1278,6 +1280,56 @@
                 }
             };
 
+            const takeScreenshot = async () => {
+                try {
+                    // Ativar modo screenshot
+                    setScreenshotMode(true);
+                    
+                    // Aguardar um frame para UI atualizar
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    // Carregar html2canvas dinamicamente
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                    document.head.appendChild(script);
+                    
+                    script.onload = async () => {
+                        const profileCard = document.querySelector('.profile-card');
+                        
+                        if (profileCard && window.html2canvas) {
+                            const canvas = await window.html2canvas(profileCard, {
+                                backgroundColor: null,
+                                scale: 2,
+                                logging: false,
+                                useCORS: true
+                            });
+                            
+                            // Converter para blob e baixar
+                            canvas.toBlob((blob) => {
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.download = `discord-profile-${Date.now()}.png`;
+                                link.href = url;
+                                link.click();
+                                URL.revokeObjectURL(url);
+                                
+                                // Desativar modo screenshot
+                                setScreenshotMode(false);
+                            });
+                        }
+                    };
+                    
+                    script.onerror = () => {
+                        alert('Erro ao carregar biblioteca de screenshot');
+                        setScreenshotMode(false);
+                    };
+                } catch (error) {
+                    console.error('Erro ao tirar screenshot:', error);
+                    alert('Erro ao gerar screenshot');
+                    setScreenshotMode(false);
+                }
+            };
+
             const handleImageUpload = (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -1301,9 +1353,20 @@
                 const targetUserId = isPublicView ? publicUserId : userData?.id;
                 if (!targetUserId) return;
 
+                let heartbeatInterval = null;
+                let reconnectTimeout = null;
+
                 const connectLanyard = () => {
                     if (wsRef.current) {
                         wsRef.current.close();
+                    }
+
+                    if (heartbeatInterval) {
+                        clearInterval(heartbeatInterval);
+                    }
+
+                    if (reconnectTimeout) {
+                        clearTimeout(reconnectTimeout);
                     }
 
                     const ws = new WebSocket('wss://api.lanyard.rest/socket');
@@ -1318,7 +1381,7 @@
                         
                         if (data.op === 1) {
                             // Heartbeat
-                            setInterval(() => {
+                            heartbeatInterval = setInterval(() => {
                                 if (ws.readyState === WebSocket.OPEN) {
                                     ws.send(JSON.stringify({ op: 3 }));
                                 }
@@ -1356,7 +1419,10 @@
 
                     ws.onclose = () => {
                         console.log('Lanyard desconectado, reconectando...');
-                        setTimeout(connectLanyard, 5000);
+                        if (heartbeatInterval) {
+                            clearInterval(heartbeatInterval);
+                        }
+                        reconnectTimeout = setTimeout(connectLanyard, 5000);
                     };
                 };
 
@@ -1365,6 +1431,12 @@
                 return () => {
                     if (wsRef.current) {
                         wsRef.current.close();
+                    }
+                    if (heartbeatInterval) {
+                        clearInterval(heartbeatInterval);
+                    }
+                    if (reconnectTimeout) {
+                        clearTimeout(reconnectTimeout);
                     }
                     if (progressIntervalRef.current) {
                         clearInterval(progressIntervalRef.current);
@@ -1585,7 +1657,7 @@
                         </div>
                     )}
                     
-                    {!isPublicView && (
+                    {!isPublicView && !screenshotMode && (
                         <>
                             <div className={`menu-toggle ${menuOpen ? 'open' : ''}`} onClick={() => setMenuOpen(!menuOpen)}>
                                 {menuOpen ? '✕' : '⚙'}
@@ -1595,6 +1667,33 @@
                         <h3>Configurações</h3>
                         
                         <div className="section">
+                            <button 
+                                onClick={takeScreenshot}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                    fontSize: '0.9rem',
+                                    transition: 'all 0.3s ease',
+                                    marginBottom: '0.75rem'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = 'none';
+                                }}
+                            >
+                                Tirar Screenshot
+                            </button>
+                            
                             <button 
                                 onClick={handleLogout}
                                 style={{
@@ -1616,7 +1715,36 @@
                         </div>
 
                         <div className="section">
-                            <div className="section-title">Temas</div>
+                            <div 
+                                onClick={() => setShowThemesSection(!showThemesSection)}
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    cursor: 'pointer',
+                                    padding: '0.5rem',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    borderRadius: '8px',
+                                    marginBottom: showThemesSection ? '1rem' : '0',
+                                    transition: 'all 0.3s ease'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                            >
+                                <div className="section-title" style={{ marginBottom: 0 }}>Temas</div>
+                                <div style={{
+                                    transform: showThemesSection ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 0.3s ease',
+                                    fontSize: '1.2rem'
+                                }}>
+                                    ▼
+                                </div>
+                            </div>
+                            
+                            {showThemesSection && (
+                                <div style={{
+                                    animation: 'fadeIn 0.3s ease'
+                                }}>
                             
                             <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
                                 <button
@@ -1758,6 +1886,8 @@
                                     </div>
                                 ))}
                             </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="section">
